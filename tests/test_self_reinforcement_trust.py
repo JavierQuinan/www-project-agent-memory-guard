@@ -24,14 +24,18 @@ def _drive(
         detector._pending_source_class = SourceClass.UNKNOWN
 
 
+def _prime(detector: SelfReinforcementDetector) -> None:
+    _drive(detector, "k", "stable fact")
+    _drive(detector, "k", "stable fact")
+
+
 def test_untrusted_source_does_not_decay_counter():
     detector = SelfReinforcementDetector(
         max_self_writes=2,
         similarity_threshold=0.5,
         trusted_source_classes={SourceClass.SYSTEM},
     )
-    _drive(detector, "k", "stable fact")
-    _drive(detector, "k", "stable fact")
+    _prime(detector)
     detector.note_independent_write("k", SourceClass.USER_INPUT)
     assert _drive(detector, "k", "stable fact").matched
 
@@ -42,20 +46,58 @@ def test_explicitly_trusted_source_decays_counter():
         similarity_threshold=0.5,
         trusted_source_classes={SourceClass.SYSTEM},
     )
-    _drive(detector, "k", "stable fact")
-    _drive(detector, "k", "stable fact")
+    _prime(detector)
     detector.note_independent_write("k", SourceClass.SYSTEM)
     assert not _drive(detector, "k", "stable fact").matched
 
 
-def test_default_sources_preserve_legacy_decay():
+def test_default_user_input_does_not_decay_counter():
     detector = SelfReinforcementDetector(
         max_self_writes=2,
         similarity_threshold=0.5,
     )
-    _drive(detector, "k", "stable fact")
-    _drive(detector, "k", "stable fact")
+    _prime(detector)
     detector.note_independent_write("k", SourceClass.USER_INPUT)
+    assert _drive(detector, "k", "stable fact").matched
+
+
+def test_default_external_tool_does_not_decay_counter():
+    detector = SelfReinforcementDetector(
+        max_self_writes=2,
+        similarity_threshold=0.5,
+    )
+    _prime(detector)
+    detector.note_independent_write("k", SourceClass.EXTERNAL_TOOL)
+    assert _drive(detector, "k", "stable fact").matched
+
+
+def test_default_unknown_does_not_decay_counter():
+    detector = SelfReinforcementDetector(
+        max_self_writes=2,
+        similarity_threshold=0.5,
+    )
+    _prime(detector)
+    detector.note_independent_write("k", SourceClass.UNKNOWN)
+    assert _drive(detector, "k", "stable fact").matched
+
+
+def test_omitted_source_class_is_unknown_and_does_not_decay_counter():
+    detector = SelfReinforcementDetector(
+        max_self_writes=2,
+        similarity_threshold=0.5,
+    )
+    _prime(detector)
+    detector.note_independent_write("k")
+    assert _drive(detector, "k", "stable fact").matched
+
+
+def test_default_system_decays_counter():
+    detector = SelfReinforcementDetector(
+        max_self_writes=2,
+        similarity_threshold=0.5,
+    )
+    _prime(detector)
+    detector.note_independent_write("k", SourceClass.SYSTEM)
     assert not _drive(detector, "k", "stable fact").matched
 
 
@@ -65,8 +107,7 @@ def test_empty_trusted_sources_disable_decay():
         similarity_threshold=0.5,
         trusted_source_classes=set(),
     )
-    _drive(detector, "k", "stable fact")
-    _drive(detector, "k", "stable fact")
+    _prime(detector)
     detector.note_independent_write("k", SourceClass.SYSTEM)
     assert _drive(detector, "k", "stable fact").matched
 
@@ -95,7 +136,6 @@ def test_guard_untrusted_user_input_does_not_decay_self_loop():
     detector = SelfReinforcementDetector(
         max_self_writes=2,
         similarity_threshold=0.5,
-        trusted_source_classes={SourceClass.SYSTEM},
     )
     guard = MemoryGuard(detectors=[detector])
     for _ in range(2):
@@ -120,11 +160,38 @@ def test_guard_untrusted_user_input_does_not_decay_self_loop():
     )
 
 
+def test_guard_unknown_does_not_decay_self_loop():
+    detector = SelfReinforcementDetector(
+        max_self_writes=2,
+        similarity_threshold=0.5,
+    )
+    guard = MemoryGuard(detectors=[detector])
+    for _ in range(2):
+        guard.write(
+            "fact.x",
+            "Atlantis is in the Atlantic",
+            source_class=SourceClass.AGENT_AUTHORED,
+        )
+    guard.write(
+        "fact.x",
+        "Atlantis is in the Atlantic",
+        source_class=SourceClass.UNKNOWN,
+    )
+    before = len(guard.events)
+    guard.write(
+        "fact.x",
+        "Atlantis is in the Atlantic",
+        source_class=SourceClass.AGENT_AUTHORED,
+    )
+    assert any(
+        event.detector == "self_reinforcement" for event in guard.events[before:]
+    )
+
+
 def test_guard_trusted_system_write_decays_self_loop():
     detector = SelfReinforcementDetector(
         max_self_writes=2,
         similarity_threshold=0.5,
-        trusted_source_classes={SourceClass.SYSTEM},
     )
     guard = MemoryGuard(detectors=[detector])
     for _ in range(2):

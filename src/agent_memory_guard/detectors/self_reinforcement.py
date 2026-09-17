@@ -13,8 +13,8 @@ This detector enforces two rules per (key) over a rolling window:
 2. **Self-similarity**: an `agent_authored` write whose value is >= the
    `similarity_threshold` to a recently stored `agent_authored` value on
    the same key is treated as reinforcement of the previous write, not
-   independent corroboration. A trusted non-agent write can decay the
-   counter (independent evidence weakens the loop).
+   independent corroboration. Only explicitly trusted non-agent provenance
+   may decay the counter; by default that is limited to `system` writes.
 """
 from __future__ import annotations
 
@@ -30,9 +30,7 @@ from agent_memory_guard.detectors.injection import _stringify
 from agent_memory_guard.events import Severity, SourceClass
 
 _DEFAULT_TRUSTED_SOURCE_CLASSES: frozenset[SourceClass] = frozenset(
-    source_class
-    for source_class in SourceClass
-    if source_class != SourceClass.AGENT_AUTHORED
+    {SourceClass.SYSTEM}
 )
 
 
@@ -48,10 +46,21 @@ class SelfReinforcementDetector:
     """Flags rapid, self-similar agent_authored writes to the same key.
 
     Only fires on writes whose source_class is AGENT_AUTHORED. By default,
-    non-agent source classes retain the existing behavior and are eligible to
-    decay the cool-down counter. Deployments with a stronger trust boundary can
-    pass ``trusted_source_classes`` so provenance alone does not imply
-    independent corroboration.
+    only SYSTEM provenance is eligible to decay the cool-down counter.
+    USER_INPUT, EXTERNAL_TOOL, and UNKNOWN remain untrusted corroboration
+    unless a deployment explicitly opts them in via ``trusted_source_classes``.
+
+    ``SourceClass`` is caller-supplied provenance metadata, not authentication
+    or identity verification. Applications must establish trust separately
+    before classifying a source as trusted corroboration.
+
+    To configure this through the normal guard initialization path, inject the
+    detector into ``MemoryGuard``::
+
+        detector = SelfReinforcementDetector(
+            trusted_source_classes={SourceClass.SYSTEM}
+        )
+        guard = MemoryGuard(detectors=[detector])
 
     Attributes:
         name: The unique identifier for this detector.
@@ -111,7 +120,9 @@ class SelfReinforcementDetector:
             self._by_key.pop(key, None)
 
     def note_independent_write(
-        self, key: str, source_class: SourceClass | None = None
+        self,
+        key: str,
+        source_class: SourceClass = SourceClass.UNKNOWN,
     ) -> None:
         """Record a trusted independent write on a key.
 
@@ -121,14 +132,11 @@ class SelfReinforcementDetector:
 
         Args:
             key: The memory key written to.
-            source_class: Provenance class of the independent write. When
-                supplied, only configured trusted classes may decay history.
-                Omitting it preserves the legacy direct-call behavior.
+            source_class: Caller-supplied provenance class of the write.
+                Only configured trusted classes may decay history. UNKNOWN is
+                intentionally untrusted by default.
         """
-        if (
-            source_class is not None
-            and source_class not in self._trusted_source_classes
-        ):
+        if source_class not in self._trusted_source_classes:
             return
         history = self._by_key.get(key)
         if history is not None:
