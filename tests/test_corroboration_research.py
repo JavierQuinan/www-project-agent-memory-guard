@@ -57,3 +57,51 @@ def test_valid_two_independent_sources_pass():
     assert evaluate_corroboration(
         [ev("A", "X"), ev("B", "Y")], tenant="a"
     ).allowed
+
+
+def test_matching_is_permutation_invariant_for_multiple_domains():
+    records = [
+        ev("A", "X"), ev("A", "Y"), ev("B", "X"),
+        ev("C", "Z"), ev("D", "Z"),
+    ]
+    expected = evaluate_corroboration(records, tenant="a", threshold=3)
+    assert expected.allowed
+    for shift in range(len(records)):
+        rotated = records[shift:] + records[:shift]
+        assert evaluate_corroboration(rotated, tenant="a", threshold=3) == expected
+
+
+def test_exact_budget_boundary():
+    records = [ev("A", str(i)) for i in range(256)]
+    assert evaluate_corroboration(records, tenant="a").reason == (
+        "insufficient_independent_evidence"
+    )
+
+
+def test_oversized_identifier_fails_closed():
+    assert evaluate_corroboration(
+        [ev("A" * 257, "X")], tenant="a"
+    ).reason == "invalid_evidence"
+
+
+def test_bad_authentication_type_fails_closed():
+    assert evaluate_corroboration(
+        [ev("A", "X", authenticated=1)], tenant="a"
+    ).reason == "invalid_evidence"
+
+
+def test_iterator_exception_fails_closed():
+    def hostile():
+        yield ev("A", "X")
+        raise RuntimeError("source unavailable")
+    assert evaluate_corroboration(hostile(), tenant="a").reason == "invalid_evidence"
+
+
+def test_policy_class_configuration_must_be_immutable():
+    assert evaluate_corroboration(
+        [], tenant="a", trusted_source_classes={"system"}
+    ).reason == "invalid_policy"
+
+
+def test_no_evidence_never_authorizes():
+    assert not evaluate_corroboration([], tenant="a", threshold=1).allowed
