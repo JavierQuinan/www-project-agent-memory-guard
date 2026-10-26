@@ -137,3 +137,18 @@ def test_matching_matches_exhaustive_optimum_on_small_graphs():
         )
         assert len(decision.independent_domains) == expected
         assert decision.allowed == (expected >= 1)
+
+
+def test_research_evaluator_is_not_an_authorization_boundary():
+    """Demonstrate why host-attested provenance is a release blocker.
+
+    These fabricated records pass the *advisory* evaluator. This is an
+    explicit limitation, not a claim that the caller was authenticated.
+    """
+    fabricated = [
+        ev("fabricated-domain-1", "fabricated-origin-1"),
+        ev("fabricated-domain-2", "fabricated-origin-2"),
+    ]
+    result = evaluate_corroboration(fabricated, tenant="a")
+    assert result.allowed
+    assert result.reason == "corroborated"
