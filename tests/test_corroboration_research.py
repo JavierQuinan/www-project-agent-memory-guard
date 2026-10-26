@@ -105,3 +105,35 @@ def test_policy_class_configuration_must_be_immutable():
 
 def test_no_evidence_never_authorizes():
     assert not evaluate_corroboration([], tenant="a", threshold=1).allowed
+
+
+def test_matching_matches_exhaustive_optimum_on_small_graphs():
+    """Exhaustively compare deterministic matching against brute force."""
+    from itertools import combinations, product
+
+    domains = ("A", "B", "C")
+    origins = ("X", "Y", "Z")
+    universe = list(product(domains, origins))
+
+    def optimum(edges):
+        for size in range(3, -1, -1):
+            for subset in combinations(edges, size):
+                if (
+                    len({domain for domain, _ in subset}) == size
+                    and len({origin for _, origin in subset}) == size
+                ):
+                    return size
+        return 0
+
+    for mask in range(1 << len(universe)):
+        selected = [
+            edge for index, edge in enumerate(universe) if mask & (1 << index)
+        ]
+        expected = optimum(selected)
+        decision = evaluate_corroboration(
+            [ev(domain, origin) for domain, origin in selected],
+            tenant="a",
+            threshold=1,
+        )
+        assert len(decision.independent_domains) == expected
+        assert decision.allowed == (expected >= 1)
