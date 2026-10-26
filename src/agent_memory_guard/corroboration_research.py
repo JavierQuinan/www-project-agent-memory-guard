@@ -73,7 +73,7 @@ def evaluate_corroboration(
         or not 1 <= threshold <= MAX_THRESHOLD
         or not isinstance(trusted_source_classes, frozenset)
         or not trusted_source_classes
-        or any(not isinstance(value, str) or not value for value in trusted_source_classes)
+        or any(\n            not isinstance(value, str)\n            or not value\n            or len(value) > MAX_IDENTIFIER_LENGTH\n            for value in trusted_source_classes\n        )
     ):
         return CorroborationDecision(False, (), "invalid_policy")
     pairs = set()
@@ -94,7 +94,7 @@ def evaluate_corroboration(
                 and item.source_class in trusted_source_classes
             ):
                 pairs.add((item.domain, item.upstream_origin))
-    except (TypeError, ValueError, RuntimeError):
+    except (TypeError, ValueError, RuntimeError, OverflowError):
         return CorroborationDecision(False, (), "invalid_evidence")
     independent = _maximum_matching(pairs)
     if len(independent) < threshold:
