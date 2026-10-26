@@ -108,3 +108,22 @@ This is a code-derived counterexample, **not yet an executed regression test**. 
 - **Residual DoS issue:** bounded iteration does not bound the wall time spent waiting on a hostile iterator. Production ingestion should require a materialized, schema-validated, bounded collection and enforce request timeouts at the host boundary.
 - **Residual identity issue:** maximum bipartite matching prevents exact string duplicate roots but cannot prove independence of different IDs controlled by the same attacker. Trusted provenance attestation and identity linking are mandatory.
 - **Pending integration:** upstream synchronization, authenticated adapter contract, atomic pending-write storage, policy version binding, audit semantics and read-path isolation remain prerequisites to an upstream PR.
+
+## Security verification gate — CI and integration checkpoint
+
+Research workflow: `.github/workflows/trusted-corroboration-research.yml` runs Ruff and targeted pytest on Python 3.9, 3.11, 3.12 for branch `security/trusted-corroboration-gates`. Commits 037ac23 and 852d8f8 added this workflow and expanded the suite from 8 to 15 test functions. **Published tests are not proof of passing tests; require the actual GitHub Actions job conclusions and log evidence.**
+
+### Explicit release blockers
+
+- **RB-01 Authenticated trust boundary:** current `Evidence(authenticated=True, source_class="system")` is forgeable if instantiated from untrusted data. Require host-attested, unforgeable identity and authorization checks before any integration.
+- **RB-02 Corroboration independence:** matching unique domain/origin strings is only a syntactic check; it cannot detect two attacker-controlled identities or aliased upstream provenance. Require trusted identity resolution and independence policy.
+- **RB-03 Approval integrity:** design canonical request hashing and binding to payload, operation, target, tenant, actor, policy revision and expiry; approval must be single-use and nontransferable.
+- **RB-04 Atomicity:** introduce a backend capability for atomic state transitions with idempotency, uniqueness and crash consistency. Do not simulate atomicity with `get` then `set`.
+- **RB-05 Pending isolation:** never place unapproved payloads in the committed store's enumerable keys; audit all read/search/export/embedding/cache paths.
+- **RB-06 Revocation and clock semantics:** define authoritative time, expiry, revocation and stale-policy behavior; revalidate at commit.
+- **RB-07 Dependency and upstream sync:** compare the fork baseline against current upstream release before merging implementation; preserve the previously merged trust-aware self-reinforcement fix.
+- **RB-08 CI evidence:** verify workflow success on exact HEAD and run complete project regression suite, not only the isolated tests.
+- **RB-09 Availability:** bounded input count does not stop a malicious iterator from blocking; only accept validated bounded collections at a trusted ingress layer.
+- **RB-10 Compatibility and operations:** test supported Python versions, recovery, audit redaction, denial of service, and safe failure modes.
+
+No security-closure claim is warranted until all RB gates are addressed, tested and reviewed. No upstream PR or merge is authorized by this research activity.
