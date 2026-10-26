@@ -32,3 +32,10 @@ Issue #15 already contains a design by mironovisa covering distinct pending obje
 
 ## Exit criteria
 Working isolated implementation, unit and concurrency tests, integration tests for all read paths, static checks, CI green on exact HEAD, security review, then a narrowly scoped upstream PR with threat model and evidence. No merge or deploy without explicit authorization.
+
+## Baseline audit — 2026-10-26
+- Fork research branch was created from JavierQuinan/main. Its src/agent_memory_guard/__init__.py still reports 0.3.2; upstream has subsequently reported 0.3.3 and pyproject.toml currently reports 0.4.0. Verify upstream sync and compare commits before any runtime implementation.
+- Current MemoryStore protocol exposes get/set/delete/keys/items/contains only. It does not expose an atomic compare-and-set transaction, a pending-write type, or a durable audit log. A gate implemented as ordinary get followed by set would be race-prone and must not be presented as secure.
+- InMemoryStore uses an unguarded dict; it is suitable for isolated experiments but not a cross-process approval coordinator. Pending writes must not be stored in the same enumerable keyspace as committed memories.
+- Start with a standalone pure policy evaluator and adversarial unit tests only after confirming upstream interfaces. Keep storage-specific commit logic out of the initial patch until maintainers agree on an atomic backend contract.
+- Compatibility: Python >=3.9. Do not rely on Python 3.10-only syntax or external authentication claims supplied by untrusted callers.
