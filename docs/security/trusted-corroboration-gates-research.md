@@ -98,3 +98,13 @@ This is a code-derived counterexample, **not yet an executed regression test**. 
 - CI: pin exact commit SHA and record workflow URLs, job conclusions and counts; missing notifications or a published commit are **not** evidence of green CI.
 - Record each issue as confirmed, reproduced, or hypothetical. Never claim exploitation or resolution without a passing targeted test and code review.
 - No upstream PR, public comment, merge, or deployment until separately authorized.
+
+## Implementation checkpoint — 2026-10-26
+
+- Commit 75bbc55: replaced greedy, order-sensitive selection with deterministic maximum bipartite matching between provenance domains and upstream origins. Added bounded evidence count (256), identifier lengths (256), strict threshold type/range and fail-closed malformed evidence checks.
+- Commit 23b644e: added eight focused pytest cases including all six permutations of the C01 counterexample, duplicate domain/origin, cross-tenant, untrusted class, unauthenticated evidence, invalid input and evidence budget.
+- **Verification status:** code and tests are committed but no passing GitHub Actions job or locally executed test result has been verified. These changes are experimental, not production-ready.
+- **Residual critical trust issue:** the Evidence.authenticated boolean and string IDs remain caller-populated; a malicious caller can forge them. This module must only accept evidence constructed by a trusted, authenticated adapter and its result must never be used as a reusable approval credential.
+- **Residual DoS issue:** bounded iteration does not bound the wall time spent waiting on a hostile iterator. Production ingestion should require a materialized, schema-validated, bounded collection and enforce request timeouts at the host boundary.
+- **Residual identity issue:** maximum bipartite matching prevents exact string duplicate roots but cannot prove independence of different IDs controlled by the same attacker. Trusted provenance attestation and identity linking are mandatory.
+- **Pending integration:** upstream synchronization, authenticated adapter contract, atomic pending-write storage, policy version binding, audit semantics and read-path isolation remain prerequisites to an upstream PR.
