@@ -127,3 +127,33 @@ Research workflow: `.github/workflows/trusted-corroboration-research.yml` runs R
 - **RB-10 Compatibility and operations:** test supported Python versions, recovery, audit redaction, denial of service, and safe failure modes.
 
 No security-closure claim is warranted until all RB gates are addressed, tested and reviewed. No upstream PR or merge is authorized by this research activity.
+
+## Executed independent reproduction — 2026-10-26
+
+**Scope:** a standalone Python 3 reproduction of the previously identified greedy matching defect and the deterministic maximum-matching algorithm. This is **not** a pytest run of the installed repository and **not** GitHub Actions evidence.
+
+Input: three evidence edges (domain, origin): (A,X), (A,Y), (B,X). All six input permutations were evaluated.
+
+Commands and observed output:
+```text
+python repro.py
+PASS: greedy counts differ across permutations: 1 and 2
+PASS: deterministic maximum matching returns 2 for all 6 permutations
+```
+
+The script asserted that the set of greedy counts is exactly {1,2} and that the set of maximum-matching counts is exactly {2}. Both assertions passed in the local Python runtime.
+
+**Interpretation:** demonstrates the algorithmic ordering defect and validates the matching approach on this bounded counterexample. It does not authenticate provenance, validate write approval, exercise the real MemoryGuard integration, establish full test-suite pass, or prove security closure.
+
+**Environment limitation:** the local container could not resolve github.com, so the repository could not be cloned to execute its actual pytest suite. CI results must be obtained from the GitHub Actions checks on the exact branch SHA.
+
+### Codex-ready execution backlog
+
+1. Run Ruff, mypy, pytest and coverage against the exact research branch SHA in an authenticated checkout; preserve commands, logs, environment and hashes.
+2. Threat-model provenance issuance and prove model/tool payloads cannot instantiate a trusted identity. Include spoofing, delegated authority, stale attestations and cross-tenant replay.
+3. Design pending write/approval state transitions and a backend atomic CAS contract. Implement separately from the existing committed MemoryStore keyspace.
+4. Build a fault-injection test harness: two concurrent approvers, retry after crash, revoked evidence, audit write failure, policy downgrade, time skew and request mutation.
+5. Map all read/search/export/embedding integrations and test pending invisibility.
+6. Sync with upstream and perform full regression/compatibility testing; only then propose a scoped upstream PR with the evidence matrix.
+
+**Operating rule:** Codex or another coding agent may prepare changes in this fork's research branch, but no upstream PR, merge, deployment or public comment without explicit authorization.
