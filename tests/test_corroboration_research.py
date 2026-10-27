@@ -152,3 +152,19 @@ def test_research_evaluator_is_not_an_authorization_boundary():
     result = evaluate_corroboration(fabricated, tenant="a")
     assert result.allowed
     assert result.reason == "corroborated"
+
+
+def test_oversized_trusted_class_rejected():
+    decision = evaluate_corroboration(
+        [], tenant="a", trusted_source_classes=frozenset({"x" * 257})
+    )
+    assert decision.reason == "invalid_policy"
+
+
+def test_iterator_overflow_rejected():
+    def records():
+        yield ev("A", "X")
+        raise OverflowError("iterator overflow")
+
+    decision = evaluate_corroboration(records(), tenant="a")
+    assert decision.reason == "invalid_evidence"
