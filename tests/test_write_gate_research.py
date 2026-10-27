@@ -74,3 +74,22 @@ def test_approval_cannot_be_granted_twice():
     gate.stage(item)
     assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
     assert gate.approve(item.write_id, approver="other", now=1).reason == "already_approved"
+
+
+def test_consumed_write_id_cannot_be_restaged_in_same_process():
+    gate, item = ResearchApprovalGate(), sample()
+    assert gate.stage(item).accepted
+    assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
+    assert gate.consume(item, now=1).accepted
+    assert gate.stage(item).reason == "duplicate_write_id"
+    assert gate.stage(replace(item, payload=b"replay")).reason == "duplicate_write_id"
+
+
+def test_concurrent_restaging_after_consumption_fails():
+    gate, item = ResearchApprovalGate(), sample()
+    gate.stage(item)
+    gate.approve(item.write_id, approver="reviewer", now=1)
+    assert gate.consume(item, now=1).accepted
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        results = list(pool.map(lambda _: gate.stage(item), range(24)))
+    assert all(result.reason == "duplicate_write_id" for result in results)
