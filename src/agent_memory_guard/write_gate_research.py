@@ -48,7 +48,7 @@ class ResearchApprovalGate:
         )
         if any(not isinstance(value, str) or not value for value in fields):
             raise ValueError("invalid envelope")
-        if not isinstance(envelope.payload, bytes):
+        if type(envelope.expires_at) is not int or envelope.expires_at <= 0:\n            raise ValueError("invalid expiry")\n        if not isinstance(envelope.payload, bytes):
             raise ValueError("payload must be bytes")
         encoded = b"".join(
             len(value.encode("utf-8")).to_bytes(8, "big") + value.encode("utf-8")
