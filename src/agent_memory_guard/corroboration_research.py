@@ -7,7 +7,7 @@ This evaluator never commits writes or grants reusable authorization.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import FrozenSet, Iterable, Tuple
+from collections.abc import Iterable
 
 
 MAX_EVIDENCE = 256
@@ -27,7 +27,7 @@ class Evidence:
 @dataclass(frozen=True)
 class CorroborationDecision:
     allowed: bool
-    independent_domains: Tuple[str, ...]
+    independent_domains: tuple[str, ...]
     reason: str
 
 
@@ -58,7 +58,7 @@ def evaluate_corroboration(
     *,
     tenant: str,
     threshold: int = 2,
-    trusted_source_classes: FrozenSet[str] = frozenset({"system"}),
+    trusted_source_classes: frozenset[str] = frozenset({"system"}),
 ) -> CorroborationDecision:
     """Evaluate independent provenance domains; no authorization is issued.
 
