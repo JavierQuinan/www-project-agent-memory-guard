@@ -11,7 +11,6 @@ import hashlib
 import hmac
 import threading
 from dataclasses import dataclass
-from typing import Dict
 
 
 @dataclass(frozen=True)
@@ -37,7 +36,7 @@ class ResearchApprovalGate:
 
     def __init__(self):
         self._lock = threading.RLock()
-        self._pending: Dict[str, tuple[WriteEnvelope, bytes, str | None]] = {}
+        self._pending: dict[str, tuple[WriteEnvelope, bytes, str | None]] = {}
         self._consumed_ids: set[str] = set()
 
     @staticmethod
