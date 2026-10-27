@@ -38,6 +38,7 @@ class ResearchApprovalGate:
     def __init__(self):
         self._lock = threading.RLock()
         self._pending: Dict[str, tuple[WriteEnvelope, bytes, str | None]] = {}
+        self._consumed_ids: set[str] = set()
 
     @staticmethod
     def _digest(envelope: WriteEnvelope) -> bytes:
@@ -65,7 +66,7 @@ class ResearchApprovalGate:
         except (ValueError, AttributeError, OverflowError):
             return GateResult(False, "invalid_envelope")
         with self._lock:
-            if envelope.write_id in self._pending:
+            if envelope.write_id in self._pending or envelope.write_id in self._consumed_ids:
                 return GateResult(False, "duplicate_write_id")
             self._pending[envelope.write_id] = (envelope, digest, None)
             return GateResult(True, "pending")
@@ -103,5 +104,6 @@ class ResearchApprovalGate:
                 return GateResult(False, "payload_changed")
             if approver is None:
                 return GateResult(False, "approval_required")
+            self._consumed_ids.add(envelope.write_id)
             del self._pending[envelope.write_id]
             return GateResult(True, "consumed")
