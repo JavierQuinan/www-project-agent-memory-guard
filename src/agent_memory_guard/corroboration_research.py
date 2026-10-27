@@ -6,8 +6,8 @@ This evaluator never commits writes or grants reusable authorization.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 
 MAX_EVIDENCE = 256
