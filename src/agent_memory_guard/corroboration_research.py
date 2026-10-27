@@ -73,7 +73,12 @@ def evaluate_corroboration(
         or not 1 <= threshold <= MAX_THRESHOLD
         or not isinstance(trusted_source_classes, frozenset)
         or not trusted_source_classes
-        or any(\n            not isinstance(value, str)\n            or not value\n            or len(value) > MAX_IDENTIFIER_LENGTH\n            for value in trusted_source_classes\n        )
+        or any(
+            not isinstance(value, str)
+            or not value
+            or len(value) > MAX_IDENTIFIER_LENGTH
+            for value in trusted_source_classes
+        )
     ):
         return CorroborationDecision(False, (), "invalid_policy")
     pairs = set()
