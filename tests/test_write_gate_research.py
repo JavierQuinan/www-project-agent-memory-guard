@@ -61,3 +61,16 @@ def test_concurrent_consume_has_exactly_one_winner():
     with ThreadPoolExecutor(max_workers=16) as pool:
         results = list(pool.map(lambda _: gate.consume(item, now=1), range(32)))
     assert sum(result.accepted for result in results) == 1
+
+
+def test_invalid_expiry_is_rejected_at_stage():
+    gate = ResearchApprovalGate()
+    assert gate.stage(replace(sample(), expires_at=True)).reason == "invalid_envelope"
+    assert gate.stage(replace(sample(), expires_at=-1)).reason == "invalid_envelope"
+
+
+def test_approval_cannot_be_granted_twice():
+    gate, item = ResearchApprovalGate(), sample()
+    gate.stage(item)
+    assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
+    assert gate.approve(item.write_id, approver="other", now=1).reason == "already_approved"
