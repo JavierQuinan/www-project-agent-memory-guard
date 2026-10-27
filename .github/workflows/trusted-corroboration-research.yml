@@ -28,7 +28,10 @@ jobs:
           pip install ruff
       - name: Lint research files
         run: |
-          ruff check src/agent_memory_guard/corroboration_research.py tests/test_corroboration_research.py
+          ruff check src/agent_memory_guard/corroboration_research.py src/agent_memory_guard/write_gate_research.py tests/test_corroboration_research.py tests/test_write_gate_research.py scripts/reproduce_corroboration_matching.py
       - name: Run adversarial tests
         run: |
-          python -m pytest tests/test_corroboration_research.py -v
+          python -m pytest tests/test_corroboration_research.py tests/test_write_gate_research.py -v
+      - name: Reproduce exhaustive matching oracle
+        run: |
+          python scripts/reproduce_corroboration_matching.py
