@@ -93,3 +93,19 @@ def test_concurrent_restaging_after_consumption_fails():
     with ThreadPoolExecutor(max_workers=12) as pool:
         results = list(pool.map(lambda _: gate.stage(item), range(24)))
     assert all(result.reason == "duplicate_write_id" for result in results)
+
+
+def test_pending_write_is_not_exposed_as_committed_memory():
+    gate, item = ResearchApprovalGate(), sample()
+    assert gate.stage(item).accepted
+    assert not hasattr(gate, "get")
+    assert not hasattr(gate, "set")
+    assert gate.consume(item, now=1).reason == "approval_required"
+
+
+def test_expiry_change_does_not_extend_approval():
+    gate, item = ResearchApprovalGate(), sample()
+    assert gate.stage(item).accepted
+    assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
+    assert gate.consume(replace(item, expires_at=1000), now=99).reason == "payload_changed"
+    assert gate.consume(item, now=100).reason == "expired"
