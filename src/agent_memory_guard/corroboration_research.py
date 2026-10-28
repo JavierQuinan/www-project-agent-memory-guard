@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+
 MAX_EVIDENCE = 256
 MAX_IDENTIFIER_LENGTH = 256
 MAX_THRESHOLD = 32
