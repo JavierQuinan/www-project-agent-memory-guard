@@ -109,3 +109,11 @@ def test_expiry_change_does_not_extend_approval():
     assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
     assert gate.consume(replace(item, expires_at=1000), now=99).reason == "payload_changed"
     assert gate.consume(item, now=100).reason == "expired"
+
+def test_negative_timestamps_fail_closed():
+    gate, item = ResearchApprovalGate(), sample()
+    assert gate.stage(item).accepted
+    assert gate.approve(item.write_id, approver="reviewer", now=-1).reason == "expired"
+    assert gate.consume(item, now=-1).reason == "expired"
+    assert gate.approve(item.write_id, approver="reviewer", now=1).accepted
+    assert gate.consume(item, now=1).accepted
