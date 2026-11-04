@@ -77,7 +77,7 @@ class ResearchApprovalGate:
             if record is None:
                 return GateResult(False, "not_found")
             envelope, digest, existing = record
-            if type(now) is not int or now >= envelope.expires_at:
+            if type(now) is not int or now < 0 or now >= envelope.expires_at:
                 return GateResult(False, "expired")
             if not isinstance(approver, str) or not approver or approver == envelope.requester:
                 return GateResult(False, "invalid_approver")
@@ -97,7 +97,7 @@ class ResearchApprovalGate:
             if record is None:
                 return GateResult(False, "not_found")
             staged, expected, approver = record
-            if type(now) is not int or now >= staged.expires_at:
+            if type(now) is not int or now < 0 or now >= staged.expires_at:
                 return GateResult(False, "expired")
             if not hmac.compare_digest(digest, expected):
                 return GateResult(False, "payload_changed")
